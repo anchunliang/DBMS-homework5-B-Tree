@@ -1,0 +1,86 @@
+all the files in this directory:
+
+Makefile: a sample makefile
+
+btfile.h, btindex_page.h, btleaf_page.h, btreefilescan.h:
+you need to complete member functions in btfile.C files.
+
+main.C, btree_driver.C, keys: these are the test driver
+
+========================= NOTE ================================
+btfile.h:20  //#define BT_TRACE
+  if define it, it will drive a visualization tool that shows the inner workings of the
+  b-tree during its operations.
+
+BTreeFile:insert() => 
+  // TWO CASES:
+  // 1. headerPage->root == INVALID_PAGE:
+  //    - the tree is empty and we have to create a new first page;
+  //      this page will be a leaf page (in the first time)
+  //      insertRec() only care about dataRid
+  // 2. headerPage->root != INVALID_PAGE:
+  //    - we call _insert() to insert the pair (key, rid)
+        // TWO CASES:
+        // - newRootEntryPtr != NULL: a leaf split propagated up to the root
+        //                            and the root split: the new pageNo is in
+        //                            newChildEntry->data->pageNo
+              // we have to allocate a new INDEX page and insert a key
+              // to redistribute the index entries
+              // the old root split and is now the left child of the new root
+              // update headerPage (root)
+        // - newRootEntryPtr == NULL: no new root was created;
+        //                            information on headerpage is still valid
+        //                            do nothing
+        
+        
+BTreeFile:_insert() :
+ * Do a recursive B+ tree insert of data entry <key, rid> into tree rooted
+ * at page currentPageId.
+ *
+ * If this page splits, copy (if we're on a leaf) or push (if on an index page)
+ * middle entry up by setting *goingUp to it.  Otherwise (no split) set
+ * *goingUp to NULL.
+  // TWO CASES:
+  // - pageType == INDEX:
+  //   recurse and then split if necessary
+          // two cases:
+          // - *goingUp == NULL: one level lower no split has occurred:
+          //                     we are done.
+          // - *goingUp != NULL: one of the children has split and
+          //                     **goingUp is the new data entry which has
+          //                    to be inserted on this index page
+                // check whether there can still be entries inserted on that page
+                // if yes, no split has occurred
+                // if no, we have to allocate a new INDEX page and to redistribute the index entries
+                        // get_first: returns the first <key, pageNo> from the page,
+                            /* get_key_data: unpack a <key,data> pair into pointers <targetkey,targetdata>.
+                             * Needs a) memory chunk holding the pair (*psource) and, b) the length
+                             * of the data chunk (to calculate data start of the <data> part).
+                             */
+                        // insertKey : Inserts a key, page pointer value into the index node.
+                        // make an equal split
+                            // if available space of currentIndexPage > newIndexPage,
+                            // get the record from the current index page
+                            // insert the <key,pageId> pair on the new index page
+                        // insert <newKey, newIndexPageId> into either new index page or old index page
+                        // fill *goingUp
+                            // now set prevPageId of the newIndexPage to the pageId of the deleted entry
+                            // delete first record on new index page since it is given up
+  // - pageType == LEAF:
+  //   try to insert pair (key, rid), maybe split
+          // check whether duplicate key, if yes, do not insert it and return OK
+          // check whether there can still be entries inserted on that page
+              // if yes, no split has occurred, just insert key
+              // if no, allocate a new LEAF page and to redistribute the data entries entries
+                  // double linked list
+                  // change the prevPage pointer on the next page:
+                  // get_first: returns the first <key, dataRid> from the page,
+                      /* get_key_data: unpack a <key,data> pair into pointers <targetkey,targetdata>.
+                       * Needs a) memory chunk holding the pair (*psource) and, b) the length
+                       * of the data chunk (to calculate data start of the <data> part).
+                       */
+                  // insertRec : Inserts a key, rid value into the leaf page
+                  // make an equal split
+                  // insert <newKey, tmpRid> into either new index page or old index page
+                  // fill *goingUp
+                      // make an entry for split
