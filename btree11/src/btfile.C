@@ -350,10 +350,16 @@ Status BTreeFile::insert (const void *key, const RID rid)
 
 
 	if (headerPage->root == INVALID_PAGE) {
-
+			
 		// TODO: fill the body
-		
-		return OK;
+		PageId rootPageId = -1;
+		BTIndexPage* rootIndexPage = new BTIndexPage();
+		Status st = MINIBASE_BM->new_page( (PageId&)rootPageId, (BTIndexPage*&)rootIndexPage );
+		assert( st == OK);
+		assert( rootPageId != -1);
+		rootIndexPage->init( rootPageId);
+		headerPage->root =  rootPageId;
+		//		return OK;
 	}
 
 	returnStatus = _insert(key, rid, &newRootEntryPtr, &newRootEntrySize, headerPage->root);
@@ -370,8 +376,8 @@ Status BTreeFile::insert (const void *key, const RID rid)
 
 
 	if (newRootEntryPtr != NULL) {
-		
 			// TODO: fill the body
+			headerPage->root = newRootEntryPtr->data->pageNo;
 
 	}
 
@@ -433,8 +439,12 @@ Status BTreeFile::_insert (const void *key, const RID rid,
 			//                     **goingUp is the new data entry which has
 			//                    to be inserted on this index page
 
-
+			
 			// TODO: fill the body
+						
+			if( *goingUp != NULL){
+				
+			}
 
 			break;
 		}
@@ -695,7 +705,10 @@ Status BTreeFile::findRunStart (const void   *lo_key,
 	while (ppagei->get_type() == INDEX) {
 
 			// TODO: fill the body
-
+			st = ppagei->get_first( metaRid, &curkey, curpage);
+			assert( st ==OK);
+			st = MINIBASE_BM->pinPage( curpage, (Page*&) ppagei);
+			assert( st ==OK);
 	}
 
 	assert(ppagei);
@@ -720,7 +733,10 @@ Status BTreeFile::findRunStart (const void   *lo_key,
 	while (keyCompare(&curkey, lo_key, key_type) < 0) {
 
 			// TODO: fill the body
-
+			st = ppage->get_next( metaRid, &curkey, curRid);
+			assert( st == OK);
+			st = MINIBASE_BM->pinPage( curRid, (Page*&) ppage);
+			assert( st == OK);
 	}
 
 
