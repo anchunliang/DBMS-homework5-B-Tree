@@ -353,11 +353,11 @@ Status BTreeFile::insert (const void *key, const RID rid)
 			
 		// TODO: fill the body
 		PageId rootPageId = -1;
-		BTIndexPage* rootIndexPage = new BTIndexPage();
-		Status st = MINIBASE_BM->new_page( (PageId&)rootPageId, (BTIndexPage*&)rootIndexPage );
+		BTLeafPage* rootLeafPage = new BTLeafPage();
+		Status st = MINIBASE_BM->new_page( (PageId&)rootPageId, (BTLeafPage*&)rootLeafPage );
 		assert( st == OK);
 		assert( rootPageId != -1);
-		rootIndexPage->init( rootPageId);
+		rootLeafPage->init( rootPageId);
 		headerPage->root =  rootPageId;
 		//		return OK;
 	}
