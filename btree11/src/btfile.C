@@ -477,7 +477,12 @@ Status BTreeFile::_insert (const void *key, const RID rid,
 			// TODO: fill the body
 			BTLeafPage* leafPage = (BTLeafPage*) rpPtr;
 			RID& myRid;
-			if( leafPage.available_space() >= sizeof( Key
+			if( leafPage.available_space() >= sizeof( KeyDataEntry)){
+			
+			}
+			else{
+				//split
+			}
 			/*
 			 *
 
