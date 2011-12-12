@@ -449,21 +449,79 @@ Status BTreeFile::_insert (const void *key, const RID rid,
 			if (returnStatus != OK)
 				MINIBASE_FIRST_ERROR(BTREE, INSERT_FAILED);
 
-			if( *goingDown != NULL){
+			if( *newEntry != NULL){
 				if( indexPage.available_space() >= sizeof( KeyDataEntry)){
-					indexPage->insertKey( (*goingDown)->key, headerPage->key_type, (*goingDown)->data.pageNo, myRid);
+					indexPage->insertKey( (*newEntry)->key, headerPage->key_type, (*newEntry)->data.pageNo, myRid);
 				}
 				else{
 					//pageFUll:
 					//new a Indexpage "RightSibling"
+					BTIndexPage* rightSiblingIndexPage;
+					PageId rightPageId;
+					Status st = MINIBASE_BM->new_page( (PageId&)rightPageId, (BTIndexPage*&)rightSiblingIndexPage );
+					assert( st == OK);
+					BTIndexPage* leftSiblingIndexPage;
+					PageId leftPageId;
+					Status st = MINIBASE_BM->new_page( (PageId&)leftPageId, (BTIndexPage*&)leftSiblingIndexPage );
+					assert( st == OK);
 					//chose a mediate_key to push up
-					//move all the keys larger than mediate key to "RightSibling"
-					//RightSibling->setLeftLink( mediate_key->data.pageNo)
-					//*goingUp->key = mediate_key;  *goingUp->data -> the_first_key_larger_than_mediate_key ;
-					//	implemented as... :  makeEntry( *goingUp, mediate_key->key, the_first_key_larger_than_mediate_key->data.pageNo,...) 
+					int numLeft = (slotCnt+1)/2;
+					int numRight = slotCnt+1-numLeft;
+					Status st;
+					RID &metaRid;
+					KeyType iterKey;
+					PageId &iterPage;
+					st = get_first( metaRid, &iterKey, iterPage);
+					assert( st == OK);
+					RID& dummyRid;
+					RID leftLastRid;
+					KeyType medKey;
+					PageId medPage;
+					bool entryInserted = false;
+					for( int i = 0 ; i < numLeft-1 ; i++){
+						st = indexPage->get_next( metaRid, &iterKey, iterPage);
+					}
+					if(  !entryInserted && keyCompare( &((*newEntry)->key), &iterKey, headerPage->key_type) <=0){
+						//newEntry is in the left half
+						indexPage->insertKey( &((*newEntry)->key), headerPage->key_type, (*newEntry)->data.pageNo, dummyRid );
+						medKey = iterKey;
+						medPage = iterPage;
+						indexPage->deleteKey( &iterKey, headerPage->key_type, dummyRid);
+						st = indexPage->get_next( metaRid, &iterKey, iterPage);
+						entryInserted = true;
+					}
+					else{
+						// this is the middle key
+						st = indexPage->get_next( metaRid, &iterKey, iterPage);
+						if(  !entryInserted && keyCompare( &((*newEntry)->key), &iterKey, headerPage->key_type) <=0){
+							medKey = (*newEntry)->key;
+							medPage = (*newEntry)->data.pageNo;
+						}
+						else{
+							medKey = iterKey;
+							medPage = iterPage;
+							rightIndexPage->insertKey( &((*newEntry)->key), headerPage->key_type, (*newEntry)->data.pageNo, dummyRid );
+							indexPage->deleteKey( &iterKey, headerPage->key_type, dummyRid);
+							st = indexPage->get_next( metaRid, &iterKey, iterPage);
+							entryInserted = true;
+						}
+					}
+					while( st == OK){
+						indexPage->deleteKey( &iterKey, headerPage->key_type, dummyRid);
+						rightIndexPage->insertKey( &iterKey, headerPage->key_type, iterPage, dummyRid );
+						st = indexPage->get_next( metaRid, &iterKey, iterPage);
+					}
+					rightSiblingIndexPage->setLeftLink( medPage);
+					//rightSiblingIndexPage->setLeftLink( leftLastRid.pageNo);
+					KeyDataEntry newEntry;
+					DataType entryData;
+					endtryData.pageNo = rightSiblingIndexPage->pageNo();
+					int entryLen;
+					make_entry( &newEntry, headerPage->key_type, medKey,INDEX,entryData, &entryLen)
+					**goingUp = newEntry;
 				}
-					
 			}
+			else **goingUp = NULL;
 			break;
 		}
 
