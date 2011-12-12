@@ -373,12 +373,10 @@ Status BTreeFile::insert (const void *key, const RID rid)
 	//                            newChildEntry->data->pageNo
 	// - newRootEntryPtr == NULL: no new root was created;
 	//                            information on headerpage is still valid
-
-
+	
 	if (newRootEntryPtr != NULL) {
 			// TODO: fill the body
 			headerPage->root = newRootEntryPtr->data->pageNo;
-
 	}
 
 	return OK;
@@ -441,10 +439,24 @@ Status BTreeFile::_insert (const void *key, const RID rid,
 
 			
 			// TODO: fill the body
-						
+			BTIndexPage* indexPage = (BTIndexPage*) rpPtr;
+
 			if( *goingUp != NULL){
-				
+				if( indexPage.available_space() >= sizeof( KeyDataEntry)){
+					indexPage->insertKey( (*goingUp)->key, headerPage->key_type, (*goingUp)->data.pageNo, (*goingUp)->data.rid);
+				}
+				else{
+					//pageFUll:
+					//new a Indexpage "RightSibling"
+					//chose a mediate_key to push up
+					//move all the keys larger than mediate key to "RightSibling"
+					//RightSibling->setLeftLink( mediate_key->data.pageNo)
+					//*goingUp->key = mediate_key;  *goingUp->data -> the_first_key_larger_than_mediate_key ;
+					//	implemented as... :  makeEntry( *goingUp, mediate_key->key, the_first_key_larger_than_mediate_key->data.pageNo,...) 
+				}
+					
 			}
+			else
 
 			break;
 		}
