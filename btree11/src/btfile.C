@@ -353,7 +353,7 @@ Status BTreeFile::insert (const void *key, const RID rid)
 			
 		// TODO: fill the body
 		PageId rootPageId = -1;
-		BTLeafPage* rootLeafPage = new BTLeafPage();
+		BTLeafPage* rootLeafPage = NULL;
 		Status st = MINIBASE_BM->new_page( (PageId&)rootPageId, (BTLeafPage*&)rootLeafPage );
 		assert( st == OK);
 		assert( rootPageId != -1);
@@ -440,10 +440,18 @@ Status BTreeFile::_insert (const void *key, const RID rid,
 			
 			// TODO: fill the body
 			BTIndexPage* indexPage = (BTIndexPage*) rpPtr;
+			RID& myRid;
+			KeyDataEntry* newEntry = new KeyDataEntry();
+			int newEntrySize;
+			PageId& pageId;
+			indexPage->get_page_no( key, headerPage->key_type, pageId);
+			Status returnStatus = _insert(key, rid, &newEntry , &newEntrySize, pageId);
+			if (returnStatus != OK)
+				MINIBASE_FIRST_ERROR(BTREE, INSERT_FAILED);
 
-			if( *goingUp != NULL){
+			if( *goingDown != NULL){
 				if( indexPage.available_space() >= sizeof( KeyDataEntry)){
-					indexPage->insertKey( (*goingUp)->key, headerPage->key_type, (*goingUp)->data.pageNo, (*goingUp)->data.rid);
+					indexPage->insertKey( (*goingDown)->key, headerPage->key_type, (*goingDown)->data.pageNo, myRid);
 				}
 				else{
 					//pageFUll:
@@ -456,8 +464,6 @@ Status BTreeFile::_insert (const void *key, const RID rid,
 				}
 					
 			}
-			else
-
 			break;
 		}
 
@@ -469,7 +475,14 @@ Status BTreeFile::_insert (const void *key, const RID rid,
 			// if no, continue
 			
 			// TODO: fill the body
-			
+			BTLeafPage* leafPage = (BTLeafPage*) rpPtr;
+			RID& myRid;
+			if( leafPage.available_space() >= sizeof( Key
+			/*
+			 *
+
+
+
 			break;
 		}
 
