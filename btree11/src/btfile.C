@@ -449,8 +449,8 @@ Status BTreeFile::_insert (const void *key, const RID rid,
 			if (returnStatus != OK)
 				MINIBASE_FIRST_ERROR(BTREE, INSERT_FAILED);
 
-			if( *newEntry != NULL){
-				if( indexPage.available_space() >= *goingUpSize){
+			if( newEntry != NULL){
+				if( indexPage.available_space() >= *newEntrySize){
 					indexPage->insertKey( (*newEntry)->key, headerPage->key_type, (*newEntry)->data.pageNo, myRid);
 				}
 				else{
@@ -517,11 +517,12 @@ Status BTreeFile::_insert (const void *key, const RID rid,
 					DataType entryData;
 					endtryData.pageNo = rightSiblingIndexPage->pageNo();
 					int entryLen;
-					make_entry( &newEntry, headerPage->key_type, medKey,INDEX,entryData, &entryLen)
+					make_entry( &newEntry, headerPage->key_type, medKey,INDEX,entryData, &entryLen);
 					**goingUp = newEntry;
+					*goingUpSize = entryLen;
 				}
 			}
-			else **goingUp = NULL;
+			else *goingUp = NULL;
 			break;
 		}
 
@@ -541,9 +542,6 @@ Status BTreeFile::_insert (const void *key, const RID rid,
 			else{
 				//split
 			}
-			/*
-			 *
-
 
 
 			break;
@@ -779,6 +777,7 @@ Status BTreeFile::findRunStart (const void   *lo_key,
 	Keytype curkey;
 	Status st;
 	AttrType key_type = headerPage->key_type;
+	KeyDataEntry curEntry;
 
 	pageno = headerPage->root;
 	if (pageno == INVALID_PAGE){        // no pages in the BTREE
@@ -791,11 +790,14 @@ Status BTreeFile::findRunStart (const void   *lo_key,
 		return MINIBASE_FIRST_ERROR(BTREE, CANT_PIN_PAGE);
 
 	while (ppagei->get_type() == INDEX) {
-
 			// TODO: fill the body
-			st = ppagei->get_first( metaRid, &curkey, curpage);
+			if( lo_key == NULL)
+				st = ppagei->get_first( metaRid, &curkey, &nextpage );
+			else{
+				st = ppagei->get_page_no( &curkey, headerPage->key_type, &nextpage);
+			}
 			assert( st ==OK);
-			st = MINIBASE_BM->pinPage( curpage, (Page*&) ppagei);
+			st = MINIBASE_BM->pinPage( nextpage, (Page*&) ppagei);
 			assert( st ==OK);
 	}
 
@@ -808,6 +810,7 @@ Status BTreeFile::findRunStart (const void   *lo_key,
 	while (st == NOMORERECS) {
 
 			// TODO: fill the body
+			st = ppage->get_next(metaRid, &curkey, curRid);
 
 	}
 
@@ -822,9 +825,8 @@ Status BTreeFile::findRunStart (const void   *lo_key,
 
 			// TODO: fill the body
 			st = ppage->get_next( metaRid, &curkey, curRid);
-			assert( st == OK);
-			st = MINIBASE_BM->pinPage( curRid, (Page*&) ppage);
-			assert( st == OK);
+			if( st == NOMORERECS)
+				break;
 	}
 
 
