@@ -385,8 +385,17 @@ Status BTreeFile::insert (const void *key, const RID rid)
 		RID& dummyRid;
 		st = rootIndexPage.insertKey( newRootEntryPtr->key, headerPage->key_type , newRoodEntryPtr->data->pageNo,  dummyRid);
 		if( st != OK) return MINIBASE_CHAIN_ERROR(BTREE, st);
+		st = MINIBASE_BM->unpinPage( headerPage->root, true );
+		if( st != OK) return MINIBASE_CHAIN_ERROR(BTREE, st);
 		headerPage->root = newRootEntryPtr->data->pageNo;
+		st = MINIBASE_BM->unpinPage( headerPage->root, true );
+		if( st != OK) return MINIBASE_CHAIN_ERROR(BTREE, st);
 	}
+	else{
+		st = MINIBASE_BM->unpinPage( headerPage->root, true );
+		if( st != OK) return MINIBASE_CHAIN_ERROR(BTREE, st);
+	}
+	
 
 	return OK;
 }
@@ -899,7 +908,16 @@ Status BTreeFile::findRunStart (const void   *lo_key,
 	while (st == NOMORERECS) {
 
 			// TODO: fill the body
-			st = ppage->get_next(metaRid, &curkey, curRid);
+			PageId nextPageId = ppage->getNextPage();
+			if( nextPageId == INVALID_PAGE){
+				*pppage = NULL;
+				return OK;
+			}
+			st = MINIBASE_BM->unpinPage( ppage->page_no(), true );
+			if( st != OK) return MINIBASE_CHAIN_ERROR(BTREE, st);
+			st = MINIBASE_BM->pinPage(nextPageId, (Page *&) ppage);
+			if( st != OK) return MINIBASE_CHAIN_ERROR(BTREE, st);
+			st = ppage->get_first(metaRid, &curkey, curRid);
 
 	}
 
