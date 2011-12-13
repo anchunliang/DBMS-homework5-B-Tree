@@ -450,7 +450,7 @@ Status BTreeFile::_insert (const void *key, const RID rid,
 				MINIBASE_FIRST_ERROR(BTREE, INSERT_FAILED);
 
 			if( *newEntry != NULL){
-				if( indexPage.available_space() >= sizeof( KeyDataEntry)){
+				if( indexPage.available_space() >= *goingUpSize){
 					indexPage->insertKey( (*newEntry)->key, headerPage->key_type, (*newEntry)->data.pageNo, myRid);
 				}
 				else{
