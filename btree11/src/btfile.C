@@ -528,12 +528,6 @@ Status BTreeFile::_insert (const void *key, const RID rid,
 
 		case LEAF:
 		{
-
-			// check whether there is duplicate key
-			// if yes, print out "Duplicate" and return OK
-			// if no, continue
-			
-			// TODO: fill the body
 			BTLeafPage* leafPage = (BTLeafPage*) rpPtr;
 			RID myRid;
 			if( leafPage->available_space() >= sizeof( KeyDataEntry)){
@@ -543,17 +537,14 @@ Status BTreeFile::_insert (const void *key, const RID rid,
 			else{
 				//split
 				int numberRec = leafPage->slotCnt;
-				BTLeafPage* newLeft;
 				BTLeafPage* newRight;
 //				BTIndexPage* newRoot;
 				Status myst;
-				PageId newLeftID;
-				pageId newRightID;
+				PageId newRightID;
 
 				void* currentKey;
 				RID currentDataRID;
-				if((myst = MINIBASE_BM->newPage(newLeftId, (Page*)newLeft)) != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
-				if((myst = MINIBASE_BM->newPage(newRightId, (Page*)newRight)) != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
+				if((myst = MINIBASE_BM->newPage(newRightID, (Page*)newRight)) != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
 				
 				RID firstRID;
 				RID nextRID;
@@ -564,40 +555,69 @@ Status BTreeFile::_insert (const void *key, const RID rid,
 				
 				
 				if((myst = leafPage->get_first(firstRID, currentKey, currentDataRID)) != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
-				int board = (numberRec+1)/2 - 1;
+				int board = (numberRec)/2;
+				
+				RID to_deletion[board+2];
+
 				for(int i = 0; i < board; i++){
-					myst = newLeft->insertRec(currentKey, headerPage->key_type, currentDataRID, tmp);
 					if(myst != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
 					if((myst = leafPage->get_next(firstRID, currentKey, currentDataRID)) != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
 				}
-				if(keyCompare(key, currentKey, headerPage->key_type)>0){
-					myst = newLeft->insertRec(currentKey, headerPage->key_type, currentDataRID, tmp);
+				int k = 0;
+				for(int j = board; j < numberRec; j++){
+					void* tmpKey = (void*) malloc(sizeof(currentKey));
+					memcpy(tmpKey, currentKey, sizeof(currentKey));
+					if((myst = leafPage->get_next(firstRID, currentKey, currentDataRID)) != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
 					if(myst != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
+					if(j == board){
+					}
+					else{
+						leafPage->delUserRid(tmpKey, headerPage->key_type, tmp);
+					}
+					myst = newRight->insertRec(currentKey, headerPage->key_type, currentDataRID, tmp);
+					if(myst != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
+				}
+				if((myst = newRight->get_first(firstRID, currentKey, currentDataRID)) != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
+
+				middleKey = currentKey;
+				middleDataRID = currentDataRID;
+				
+				if(keyCompare(key, middleKey, headerPage->key_type)>0){
 					myst = newRight->insertRec(key, headerPage->key_type, rid, tmp);
 					if(myst != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
-					middleKey = key;
-					middleDataRID = rid;
 				}
 				else if(keyCompare(key, currentKey, headerPage->key_type) == 0){
 					assert("key values equal!!");
 				}
 				else{
-					myst = newLeft->insertRec(key, headerPage->key_type, rid, tmp);
-					if(myst != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
-					myst = newRight->insertRec(currentKey, headerPage->key_type, currentDataRID, tmp);
-					if(myst != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
-					middleKey = curentKey;
-					middleDataRID = currentDataRID;
-				}
-				for(int j = board+1; j < numberRec; j++){
-					if((myst = leafPage->get_next(firstRID, currentKey, currentDataRID)) != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
-					myst = newRight->insertRec(currentKey, headerPage->key_type, currentDataRID, tmp);
+					myst = leafPage->insertRec(key, headerPage->key_type, rid, tmp);
 					if(myst != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
 				}
-				((BTIndexPage*)leafPage)->init(currentPageId);
-				assert(leafPage->get_type() == INDEX);
-				assert(leafPage->slotCnt == 0);
-				myst = leafPage->insertRec(middleKey, headerPage->key_type, middleDataRID, tmp);
+
+				PageId pre = leafPage->getPrevPage();
+				PageId nex = leafPage->getNextPage();
+				newRight->setPrevPage(currentPageId);
+				leafPage->setNextPage(newRightID);
+				Page * tmpPage;
+				if((myst = MINIBASE_BM->pinPage(nex,(Page *&) tmpPage)) != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
+				tmpPage->setPrevPage(newRightID);
+				newRight->setNextPage(nex);
+				if((myst = MINIBASE_BM->unpinPage(nex, true)) != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
+
+				if((myst = newRight->get_first(firstRID, currentKey, currentDataRID)) != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
+
+				middleKey = currentKey;
+				middleDataRID = currentDataRID;
+
+				KeyDataEntry newEntry;
+				Datatype entryData;
+				entryData.pageNo = newRightID;
+				int entryLen;
+				make_entry( &newEntry, headerPage->key_type, middleKey,INDEX,entryData, &entryLen);
+				**goingUp = newEntry;
+				*goingUpSize = entryLen;
+				if((myst = MINIBASE_BM->unpinPage(newRightID, true)) != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
+
 			}
 			break;
 		}
@@ -605,7 +625,7 @@ Status BTreeFile::_insert (const void *key, const RID rid,
 		default:        // in case memory is scribbled upon & type is hosed
 			assert(false);
 	}
-
+	if((st = MINIBASE_BM->unpinPage(currentPageId, true)) != OK) return MINIBASE_CHAIN_ERROR(BTREE, myst);
 	return OK;
 }
 
