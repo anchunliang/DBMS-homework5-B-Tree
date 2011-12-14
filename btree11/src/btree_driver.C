@@ -144,13 +144,14 @@ void BTreeTest::test1() {
 	for (i = 0; i < num; i++) {
 		rid.pageNo = i; rid.slotNo = i+1;
 		key = num - i; 
-
+		
+		cout<<"insert"<<i<<endl;
+		fflush(stdout);
 		if (i % 10 == 0) {
 			kill[(i/10)].r.pageNo = rid.pageNo;
 			kill[(i/10)].r.slotNo = rid.slotNo;
 			kill[i/10].key = key;
 		}
-
 		if (btf->insert(&key, rid) != OK) {
 			cout << "Inserting record with key = " << key << "  [pageNo,slotNo] = ";
 			cout << "[" << rid.pageNo<<","<<rid.slotNo<<"] failed!!\n" <<endl;
@@ -159,7 +160,6 @@ void BTreeTest::test1() {
 	}
 
 	// test delete()
-
 	cerr << "alive" << endl;
 	cout << "start BTreeIndex deletion" << endl << endl;
 	int j = 0;
