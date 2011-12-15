@@ -139,9 +139,11 @@ Status BTLeafPage::get_first (RID& rid,
 		dataRid.slotNo = INVALID_SLOT;
 		return NOMORERECS;
 	}
+	fprintf(stderr, "d\n");
 	get_key_data(key, (Datatype *) &dataRid,
 			(KeyDataEntry *)(data+slot[0].offset), slot[0].length,
 			get_type() );
+	fprintf(stderr, "e\n");
 	return OK;
 }
 

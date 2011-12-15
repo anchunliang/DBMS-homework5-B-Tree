@@ -91,8 +91,12 @@ Status BTIndexPage::get_page_no(const void *key,
 			return OK;
 		}
 	}
+	printf("myID%d\n", curPage);
+
 
 	pageNo = getPrevPage();
+	printf("pageNO%d\n", pageNo);
+	fflush(stdout);
 	return OK;
 }
 

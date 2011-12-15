@@ -99,6 +99,7 @@ static void fill_entry_key(Keytype *target,
 			int *p = &target->intkey;
 			*p = *(int *) key;
 			*pentry_key_len = sizeof(*p);
+//			printf("sizeof[%d]\n" ,sizeof(*p) );
 			return;
 		}
 		case attrString:
@@ -135,6 +136,7 @@ static void fill_entry_data(char *target,
 			//      PageId *p = &target->pageNo;
 			Datatype src = source;
 			memcpy(target, &src, sizeof(PageId));
+//			fprintf( stdout, " helllooooo <%d> <%d>\n", (int)*target,src.pageNo); 
 			*pentry_data_len = sizeof(PageId);
 			return;
 		}
@@ -172,9 +174,12 @@ void make_entry(KeyDataEntry *target,
 	// below we can't say "&target->data" because <data> field may actually
 	// start before that location (recall that KeyDataEntry is simply
 	// a chunk of memory big enough to hold any legal <key,data> pair).
+//	printf("keylen change???%d\n", keylen);
 	fill_entry_data((char *) (((char *)target) + keylen),
 			data, ndtype,
 			&datalen);
+//	printf("keylen change???%d\n", keylen);
+//	fprintf(stdout, "print make entry: key[%d], data[%d] <%d>\n", 1,target->key.intkey, (int)((char*)target)[keylen], keylen);
 	*pentry_len = keylen + datalen;
 }
 
@@ -203,7 +208,9 @@ void get_key_data(void *targetkey, Datatype *targetdata,
 	}
 	keylen = entry_len - datalen;
 	if ( targetkey ){
+		fprintf(stderr, "t\n");
 		memcpy(targetkey, psource, keylen);
+		fprintf(stderr, "t\n");
 	}
 	if ( targetdata ){
 		memcpy(targetdata, ((char*)psource) + keylen, datalen);
